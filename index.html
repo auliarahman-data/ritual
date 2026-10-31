@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ritual">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d0f17">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui}[hidden]{display:none!important}</style>
+<title>Ritual Malam Pagi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: satu kolom. Beranda memuat jam, dua sesi dan riwayat 7 hari. Saat jendela waktu tiba, kunci layar penuh mengambil alih. Malam memakai warna hangat redup (hemat cahaya biru), pagi memakai warna terang. */
+:root{
+  --bg:#eef2f5; --surface:#ffffff; --fg:#14212b; --muted:#566673; --line:#d2dbe2;
+  --accent:#b93d0b; --accent-fg:#ffffff; --ok:#1d7549; --warn:#9a5b00;
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d0f17; --surface:#151925; --fg:#eadcc2; --muted:#a09580; --line:#272c3c;
+    --accent:#e8a64a; --accent-fg:#1c1305; --ok:#86c9a0; --warn:#e0b060; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d0f17; --surface:#151925; --fg:#eadcc2; --muted:#a09580; --line:#272c3c;
+  --accent:#e8a64a; --accent-fg:#1c1305; --ok:#86c9a0; --warn:#e0b060; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--f-body);-webkit-text-size-adjust:100%}
+html.locked{overflow:hidden}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.wrap{max-width:560px;margin:0 auto;padding-block:20px 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font:800 22px var(--f-display);letter-spacing:-.01em}
+.btn{font:600 14px var(--f-body);min-height:44px;padding:10px 14px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;cursor:pointer}
+.btn.pri{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:13px}
+.btn.wide{width:100%;min-height:56px;font-size:17px}
+.btn.danger{color:var(--warn)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.hero{padding:24px 0 4px;display:flex;flex-direction:column;gap:4px}
+.hero-time{font:500 clamp(60px,20vw,92px)/1 var(--f-mono);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.date{color:var(--muted)}
+.next{font:500 14px var(--f-mono);color:var(--accent);margin-top:6px}
+.block{margin-top:30px}
+.eyebrow{font:500 12px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.sess{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.sess.last{border-bottom:1px solid var(--line)}
+.sess-name{font:700 19px var(--f-display)}
+.sess-meta{font:400 13px var(--f-mono);color:var(--muted)}
+.status{font-size:14px;margin-top:2px}
+.status.ok{color:var(--ok)}
+.status.skip{color:var(--warn)}
+.hint{font-size:13px;color:var(--muted);margin:10px 0 0}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.wd{display:flex;flex-direction:column;align-items:center;gap:6px;font:400 11px var(--f-mono);color:var(--muted)}
+.dot{width:16px;height:16px;border:2px solid var(--line);border-radius:4px}
+.dot.ok{background:var(--ok);border-color:var(--ok)}
+.dot.skip{border-color:var(--warn);background:linear-gradient(135deg,transparent 44%,var(--warn) 44%,var(--warn) 56%,transparent 56%)}
+details{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;margin-top:30px}
+summary{cursor:pointer;font-weight:600}
+details ol{margin:10px 0 0;padding-left:20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px}
+
+.savemsg{font:400 12px var(--f-mono);color:var(--muted);min-height:18px;margin:6px 0 0}
+.panel{margin-top:22px}
+.panel h2{font-size:18px;margin-bottom:10px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.in{width:100%;font:16px var(--f-body);padding:10px 12px;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px}
+.in.sub{font-size:14px;min-height:40px;color:var(--muted)}
+.in.num{width:84px}
+.tabs{display:flex;gap:8px;margin-top:26px}
+.tab{flex:1}
+.tab[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.elist{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid var(--line)}
+.er{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:1px solid var(--line)}
+.er-line{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.off{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.at{font:500 14px var(--f-mono);margin-right:auto}
+.tag{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.addrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;align-items:flex-end}
+.addrow .grow{flex:1 1 180px;min-width:0}
+
+#lock{position:fixed;inset:0;z-index:50;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);color:var(--fg);
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+#lock[data-phase="evening"]{--bg:#070403;--surface:#120b08;--fg:#d9a06b;--muted:#8f6f55;--line:#28190f;--accent:#e0713a;--accent-fg:#1c0d05;--ok:#9bbf8a;--warn:#d9a06b;color-scheme:dark}
+#lock[data-phase="evening"] .lk-clock{color:#c98d58}
+#lock[data-phase="evening"] .t-label{font-weight:500}
+#lock[data-phase="morning"]{--bg:#f2faff;--surface:#ffffff;--fg:#08161f;--muted:#44596a;--line:#c3d6e3;--accent:#b93d0b;--accent-fg:#ffffff;--ok:#16693f;--warn:#8a5200;color-scheme:light;background:linear-gradient(180deg,#ffe98a 0,#fff6cf 150px,#f2faff 400px) no-repeat,var(--bg)}
+#lock[data-phase="morning"] .lk-clock{font-weight:500;color:#08161f}
+#lock[data-phase="morning"] .t-label{font-weight:700}
+#lock:not([hidden]){animation:lockin 1.2s ease-out}
+@keyframes lockin{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){#lock:not([hidden]){animation:none}}
+.lk{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:18px}
+.lk-top{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:36px}
+.phase{font:500 12px var(--f-mono);letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+.lk-clock{font:500 clamp(68px,24vw,108px)/1 var(--f-mono);letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.sub{color:var(--muted);font-size:15px;margin:0}
+.sub.small{font-size:13px}
+.prog{display:flex;align-items:center;gap:12px;font:400 13px var(--f-mono);color:var(--muted)}
+.prog-track{flex:1;height:4px;background:var(--line)}
+.prog-track i{display:block;height:100%;background:var(--accent);width:var(--w,0%);transition:width .3s}
+.free{border-left:3px solid var(--accent);padding:2px 0 2px 12px;font-size:15px}
+.tasks{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.task{border-bottom:1px solid var(--line)}
+.task-row{display:grid;grid-template-columns:46px 28px minmax(0,1fr);gap:12px;align-items:start;width:100%;text-align:left;background:none;border:0;padding:16px 0;min-height:64px;cursor:pointer}
+.task-row.static{cursor:default}
+.t-time{font:500 14px/28px var(--f-mono);color:var(--muted)}
+.cb{width:28px;height:28px;border:2px solid var(--muted);border-radius:6px;position:relative}
+.task.done .cb{background:var(--ok);border-color:var(--ok)}
+.task.done .cb::after{content:"";position:absolute;left:8px;top:2px;width:6px;height:13px;border:solid var(--bg);border-width:0 3px 3px 0;transform:rotate(45deg)}
+.t-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.t-label{font:600 18px/1.3 var(--f-body);overflow-wrap:anywhere}
+.t-note{color:var(--muted);font-size:14px}
+.task.done .t-label{color:var(--muted);text-decoration:line-through}
+.task.now .cb{border-color:var(--accent);border-width:3px}
+.task.now .t-time{color:var(--accent)}
+.task-body{padding:0 0 18px 58px;display:flex;flex-direction:column;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:8px 14px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;text-align:left;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.lk-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-top:12px}
+.hold{position:relative;overflow:hidden;min-height:52px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.hold .fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--line)}
+.hold.on .fill{width:100%;transition:width var(--ms,3000ms) linear}
+.hold .lbl{position:relative;font-size:14px;color:var(--muted)}
+.finish{margin:auto 0;display:flex;flex-direction:column;gap:16px;padding:24px 0}
+.finish h2{font-size:clamp(32px,10vw,46px);line-height:1.05}
+.finish .hardest{font:700 22px/1.25 var(--f-display);color:var(--accent);overflow-wrap:anywhere}
+@media (prefers-reduced-motion:reduce){.prog-track i,.hold.on .fill{transition:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="lock" hidden role="dialog" aria-modal="true" aria-label="Checklist ritual"></div>
+
+<script>
+(function(){
+'use strict';
+var C = window.claude;
+var LS = 'ritual-v1';
+var $ = function(s,r){ return (r||document).querySelector(s); };
+var pad = function(n){ return String(n).padStart(2,'0'); };
+var toMin = function(s){ var a=s.split(':'); return (+a[0])*60+(+a[1]); };
+var fmt = function(m){ m=((m%1440)+1440)%1440; return pad(Math.floor(m/60))+':'+pad(m%60); };
+var dkey = function(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+var nowMin = function(){ var d=new Date(); return d.getHours()*60+d.getMinutes(); };
+var prevKey = function(k){ var p=k.split('-').map(Number); return dkey(new Date(p[0],p[1]-1,p[2]-1)); };
+var clamp = function(n,a,b){ return Math.min(b,Math.max(a,n)); };
+
+function h(tag, props){
+  var el=document.createElement(tag);
+  props=props||{};
+  Object.keys(props).forEach(function(k){
+    var v=props[k];
+    if(v==null||v===false) return;
+    if(k==='class') el.className=v;
+    else if(k==='text') el.textContent=v;
+    else if(k==='value') el.value=v;
+    else if(k==='disabled') el.disabled=true;
+    else if(k.slice(0,2)==='on') el.addEventListener(k.slice(2),v);
+    else el.setAttribute(k,v===true?'':v);
+  });
+  var kids=Array.prototype.slice.call(arguments,2);
+  (function add(list){ list.forEach(function(c){
+    if(c==null||c===false) return;
+    if(Array.isArray(c)) return add(c);
+    el.append(c.nodeType?c:document.createTextNode(c));
+  }); })(kids);
+  return el;
+}
+
+function defaults(){
+  return {
+    v:1, wake:'04:15', bed:'23:00', free:60,
+    eve:[
+      {id:'e1',off:120,kind:'check',label:'Makan terakhir sudah selesai',note:'Setelah ini hanya air putih.'},
+      {id:'e2',off:60,kind:'check',label:'Layar redup, night mode aktif',note:'Lampu kamar diredupkan. Medsos ditutup.'},
+      {id:'e3',off:45,kind:'check',label:'Mandi air hangat dan skincare dasar',note:'Sekitar 10 menit.'},
+      {id:'e4',off:30,kind:'check',label:'Review hari ini di buku catatan',note:'Tulis: yang sudah benar, yang keliru, yang akan diubah.'},
+      {id:'e5',off:20,kind:'priorities',label:'Tulis 3 prioritas besok',note:'Tiga hal yang benar-benar menggerakkan hidup.'},
+      {id:'e6',off:0,kind:'check',label:'Lampu mati, tidur',note:'Jam tidur tetap, tanpa tawar-menawar.'}
+    ],
+    mor:[
+      {id:'m1',off:0,kind:'check',label:'Bangun dari tempat tidur',note:'Jam yang sama setiap hari.'},
+      {id:'m2',off:5,kind:'check',label:'Rapikan tempat tidur',note:''},
+      {id:'m3',off:10,kind:'check',label:'Minum satu gelas air',note:''},
+      {id:'m4',off:15,kind:'check',label:'Cari cahaya terang',note:'Matahari belum terbit? Nyalakan lampu paling terang, keluar saat langit mulai terang.'},
+      {id:'m5',off:25,kind:'check',label:'Gerak badan',note:'10 push-up atau peregangan 5 menit.'},
+      {id:'m6',off:60,kind:'check',label:'Sarapan protein',note:'Telur rebus, yogurt, atau shake. Hindari yang manis.'},
+      {id:'m7',off:70,kind:'pick',label:'Kerjakan tugas tersulit dulu',note:'Sebelum email dan pesan.'}
+    ],
+    log:{}
+  };
+}
+function normalize(x){
+  var d=defaults(), s=Object.assign(d,x||{});
+  ['eve','mor'].forEach(function(k){ if(!Array.isArray(s[k])) s[k]=d[k]; });
+  if(!s.log||typeof s.log!=='object') s.log={};
+  if(!/^\d\d:\d\d$/.test(s.wake)) s.wake='04:15';
+  if(!/^\d\d:\d\d$/.test(s.bed)) s.bed='23:00';
+  s.free = Number.isFinite(s.free) ? s.free : 60;
+  return s;
+}
+
+var S = defaults();
+var ui = {view:'home', tab:'eve', overlay:null, ready:false, saveMsg:''};
+var ref = null, dirty = false;
+
+/* ---------- persistence ---------- */
+var saveT=null, saving=false, pending=false;
+function scheduleSave(){
+  dirty=true; ui.saveMsg='Menyimpan...'; paintSave();
+  clearTimeout(saveT); saveT=setTimeout(doSave,500);
+}
+function paintSave(){ var e=$('#savemsg'); if(e) e.textContent=ui.saveMsg; }
+async function doSave(){
+  if(saving){ pending=true; return; }
+  saving=true;
+  var keys=Object.keys(S.log).sort();
+  while(keys.length>60) delete S.log[keys.shift()];
+  var snap=JSON.parse(JSON.stringify(S));
+  try{ localStorage.setItem(LS,JSON.stringify(snap)); }catch(e){}
+  ui.saveMsg='Tersimpan di perangkat ini';
+  if(ref){
+    try{ await ref.set(snap); ui.saveMsg='Tersimpan di akun Anda'; }catch(e){}
+  }
+  saving=false; paintSave();
+  if(pending){ pending=false; doSave(); }
+}
+async function loadState(){
+  var loaded=null;
+  try{
+    var db = C && await C.use('db');
+    var user = C && await C.use('user');
+    var id = user && await user.id();
+    if(db && id){
+      ref = db.doc('data/users/'+id+'/ritual');
+      var snap = await ref.get();
+      if(snap.exists) loaded = JSON.parse(JSON.stringify(snap.data()));
+    }
+  }catch(e){ ref=null; }
+  if(!loaded){
+    try{ var r=localStorage.getItem(LS); if(r) loaded=JSON.parse(r); }catch(e){}
+  }
+  if(loaded && !dirty) S=normalize(loaded);
+  ui.ready=true;
+  renderAll(); syncOverlay();
+}
+
+/* ---------- schedule logic ---------- */
+function windows(){
+  var W=toMin(S.wake), B=toMin(S.bed);
+  var eveMax=Math.max.apply(null,[0].concat(S.eve.map(function(t){return t.off;})));
+  var morMax=Math.max.apply(null,[0].concat(S.mor.map(function(t){return t.off;})));
+  return {W:W,B:B,E:Math.max(B-eveMax,W+1),Mend:W+morMax+30};
+}
+function sorted(ph){ return S[ph].slice().sort(function(a,b){ return ph==='eve'?b.off-a.off:a.off-b.off; }); }
+function atMin(ph,t){ return ph==='eve'?toMin(S.bed)-t.off:toMin(S.wake)+t.off; }
+function currentPhase(){
+  var w=windows(), d=new Date(), m=d.getHours()*60+d.getMinutes(), today=dkey(d);
+  if(m>=w.W && m<w.Mend) return {phase:'mor',key:today};
+  if(m>=w.E) return {phase:'eve',key:today};
+  if(m<w.W){ var y=new Date(d); y.setDate(y.getDate()-1); return {phase:'eve',key:dkey(y)}; }
+  return {phase:null,key:today};
+}
+function entry(key,ph){ return (S.log[key]&&S.log[key][ph])||null; }
+function lg(key,ph){
+  S.log[key]=S.log[key]||{};
+  S.log[key][ph]=S.log[key][ph]||{done:[]};
+  return S.log[key][ph];
+}
+function isDone(key,ph){ var l=entry(key,ph); return !!(l&&(l.at||l.skip)); }
+
+function syncOverlay(){
+  var cp=currentPhase(), o=ui.overlay;
+  if(o&&(o.manual||o.finishShown)) return;
+  var want = cp.phase && S[cp.phase].length && !isDone(cp.key,cp.phase);
+  if(want){
+    if(!o||o.phase!==cp.phase||o.key!==cp.key){ ui.overlay={phase:cp.phase,key:cp.key,manual:false}; renderAll(); }
+  }else if(o){ ui.overlay=null; renderAll(); }
+}
+function nextText(){
+  var w=windows(), m=nowMin(), cp=currentPhase();
+  if(cp.phase && S[cp.phase].length && !isDone(cp.key,cp.phase)) return cp.phase==='eve'?'Sesi malam sedang berjalan':'Sesi pagi sedang berjalan';
+  var best=null;
+  [{n:'Pagi',at:w.W},{n:'Malam',at:w.E}].forEach(function(c){
+    var diff=c.at-m; if(diff<=0) diff+=1440;
+    if(!best||diff<best.diff) best={n:c.n,diff:diff,at:c.at};
+  });
+  var hh=Math.floor(best.diff/60), mm=best.diff%60;
+  return best.n+' mulai '+fmt(best.at)+' · '+(hh?hh+' j ':'')+mm+' m lagi';
+}
+
+/* ---------- wake lock ---------- */
+var wl=null;
+async function requestWake(){
+  try{
+    if(!wl && navigator.wakeLock && document.visibilityState==='visible'){
+      wl=await navigator.wakeLock.request('screen');
+      wl.addEventListener('release',function(){ wl=null; });
+    }
+  }catch(e){ wl=null; }
+}
+function releaseWake(){ try{ if(wl) wl.release(); }catch(e){} wl=null; }
+
+/* ---------- overlay actions ---------- */
+function checkComplete(o){
+  var l=lg(o.key,o.phase), tasks=S[o.phase];
+  var all=tasks.length && tasks.every(function(t){ return l.done.indexOf(t.id)>=0; });
+  if(all){ if(!l.at){ l.at=Date.now(); o.finishShown=true; } }
+  else delete l.at;
+}
+function setDone(o,t,on){
+  var l=lg(o.key,o.phase), i=l.done.indexOf(t.id);
+  if(on&&i<0) l.done.push(t.id);
+  if(!on&&i>=0) l.done.splice(i,1);
+  checkComplete(o); scheduleSave(); renderOverlay();
+}
+function skip(o){
+  lg(o.key,o.phase).skip=true;
+  ui.overlay=null; scheduleSave(); renderAll();
+}
+function holdButton(label,ms,onDone){
+  var b=h('button',{class:'hold',type:'button'},h('span',{class:'fill'}),h('span',{class:'lbl',text:label}));
+  var t=null;
+  function start(e){ if(e&&e.preventDefault) e.preventDefault(); if(t) return;
+    b.style.setProperty('--ms',ms+'ms'); b.classList.add('on');
+    t=setTimeout(function(){ t=null; b.classList.remove('on'); onDone(); },ms); }
+  function stop(){ if(t){ clearTimeout(t); t=null; } b.classList.remove('on'); }
+  b.addEventListener('pointerdown',start);
+  ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ b.addEventListener(ev,stop); });
+  b.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+  b.addEventListener('keydown',function(e){ if(e.key===' '||e.key==='Enter') start(e); });
+  b.addEventListener('keyup',stop);
+  return b;
+}
+
+function specialBody(o,t,done){
+  var l=entry(o.key,o.phase)||{done:[]};
+  var body=h('div',{class:'task-body'});
+  if(t.kind==='priorities'){
+    var pri=(l.pri||['','','']).slice(); while(pri.length<3) pri.push('');
+    var btn=h('button',{class:'btn pri',type:'button',text:done?'Ubah prioritas':'Simpan 3 prioritas'});
+    function filled(){ return pri.every(function(p){ return p.trim(); }); }
+    btn.disabled = !done && !filled();
+    if(btn.disabled) btn.setAttribute('disabled','');
+    btn.addEventListener('click',function(){ setDone(o,t,!done); });
+    for(var i=0;i<3;i++){ (function(i){
+      body.append(h('input',{class:'in',type:'text',id:'pri'+i,placeholder:'Prioritas '+(i+1),'aria-label':'Prioritas '+(i+1),value:pri[i],
+        oninput:function(e){
+          pri[i]=e.target.value;
+          lg(o.key,o.phase).pri=pri.slice();
+          scheduleSave();
+          if(!done) btn.disabled=!filled();
+        }}));
+    })(i); }
+    body.append(btn);
+  } else {
+    var prev=(entry(prevKey(o.key),'eve')||{}).pri||[];
+    prev=prev.map(function(s){return s.trim();}).filter(Boolean);
+    if(prev.length){
+      body.append(h('p',{class:'sub',text:'Dari prioritas semalam. Pilih yang paling berat.'}));
+      var chips=h('div',{class:'chips'});
+      prev.forEach(function(p){
+        chips.append(h('button',{class:'chip',type:'button','aria-pressed':String(l.hard===p),text:p,onclick:function(){
+          lg(o.key,o.phase).hard=p; setDone(o,t,true);
+        }}));
+      });
+      body.append(chips);
+    } else {
+      var inp=h('input',{class:'in',type:'text',id:'hard',placeholder:'Tugas tersulit hari ini','aria-label':'Tugas tersulit',value:l.hard||''});
+      body.append(inp, h('button',{class:'btn pri',type:'button',text:'Simpan',onclick:function(){
+        var v=inp.value.trim(); if(!v){ inp.focus(); return; }
+        lg(o.key,o.phase).hard=v; setDone(o,t,true);
+      }}));
+    }
+  }
+  return body;
+}
+function taskItem(o,t,done,isNow){
+  var li=h('li',{class:'task'+(done?' done':'')+(isNow?' now':'')});
+  var head=[
+    h('span',{class:'t-time',text:fmt(atMin(o.phase,t))}),
+    h('span',{class:'cb','aria-hidden':'true'}),
+    h('span',{class:'t-txt'},h('span',{class:'t-label',text:t.label}), t.note?h('span',{class:'t-note',text:t.note}):null)
+  ];
+  if(t.kind==='priorities'||t.kind==='pick'){
+    li.append(h('div',{class:'task-row static'},head), specialBody(o,t,done));
+  } else {
+    li.append(h('button',{class:'task-row',type:'button','aria-pressed':String(done),onclick:function(){ setDone(o,t,!done); }},head));
+  }
+  return li;
+}
+
+function renderOverlay(){
+  var el=$('#lock'); el.replaceChildren();
+  var o=ui.overlay;
+  if(!o){ el.hidden=true; document.documentElement.classList.remove('locked'); releaseWake(); return; }
+  el.hidden=false; document.documentElement.classList.add('locked');
+  el.dataset.phase=o.phase==='eve'?'evening':'morning';
+  requestWake();
+  var l=entry(o.key,o.phase)||{done:[]};
+  var tasks=sorted(o.phase);
+  var inner=h('div',{class:'lk'});
+  inner.append(h('div',{class:'lk-top'},
+    h('span',{class:'phase',text:o.phase==='eve'?'Malam':'Pagi'}),
+    o.manual?h('button',{class:'btn sm',type:'button',text:'Tutup',onclick:function(){ ui.overlay=null; renderAll(); }}):null));
+  if(o.finishShown){
+    var eve=o.phase==='eve';
+    inner.append(h('div',{class:'finish'},
+      h('h2',{text:eve?'Selesai. Waktunya tidur.':'Selesai. Mulai tugas pertama.'}),
+      (!eve&&l.hard)?h('div',{class:'hardest',text:l.hard}):null,
+      h('p',{class:'sub',text:eve?'Letakkan HP jauh dari tempat tidur. Lampu mati, tidur di jam yang sama.':'Kerjakan tugas tersulit sebelum membuka email dan pesan.'}),
+      h('button',{class:'btn pri wide',type:'button',text:eve?'Tutup dan tidur':'Tutup dan mulai',onclick:function(){ ui.overlay=null; renderAll(); }})));
+    el.append(inner); return;
+  }
+  var doneN=tasks.filter(function(t){ return l.done.indexOf(t.id)>=0; }).length;
+  var pct=tasks.length?Math.round(doneN/tasks.length*100):0;
+  inner.append(
+    h('div',{class:'lk-clock',id:'lockclock',text:fmt(nowMin())}),
+    h('p',{class:'sub',id:'locksub'}),
+    h('div',{class:'prog'},h('div',{class:'prog-track'},h('i',{style:'--w:'+pct+'%'})),h('span',{text:doneN+' / '+tasks.length}))
+  );
+  if(o.phase==='mor') inner.append(h('div',{class:'free',id:'free',hidden:true}));
+  var ul=h('ul',{class:'tasks'}), nowSet=false;
+  tasks.forEach(function(t){
+    var done=l.done.indexOf(t.id)>=0, isNow=!done&&!nowSet;
+    if(isNow) nowSet=true;
+    ul.append(taskItem(o,t,done,isNow));
+  });
+  inner.append(ul);
+  if(!o.manual){
+    inner.append(h('div',{class:'lk-foot'},
+      holdButton('Tahan 3 detik untuk melewati sesi',3000,function(){ skip(o); }),
+      h('p',{class:'sub small',text:'Sesi yang dilewati tercatat sebagai dilewati.'})));
+  }
+  el.append(inner);
+  updateClocks();
+}
+function updateClocks(){
+  var hc=$('#homeclock'); if(hc){ hc.textContent=fmt(nowMin()); var n=$('#next'); if(n) n.textContent=nextText(); }
+  var o=ui.overlay; if(!o||o.finishShown) return;
+  var c=$('#lockclock'); if(c) c.textContent=fmt(nowMin());
+  var m=nowMin(), W=toMin(S.wake), B=toMin(S.bed), s=$('#locksub');
+  if(s){
+    if(o.phase==='eve'){
+      var diff=m<W?-1:B-m;
+      s.textContent = diff>=0 ? 'Tidur paling telat '+fmt(B)+' · sisa '+(Math.floor(diff/60)?Math.floor(diff/60)+' j ':'')+(diff%60)+' m' : 'Sudah lewat jam tidur '+fmt(B);
+    } else s.textContent='Bangun paling lambat '+fmt(W);
+  }
+  var f=$('#free');
+  if(f){
+    var rem=W+S.free-m;
+    if(S.free>0 && o.key===dkey(new Date()) && m>=W && rem>0){
+      f.hidden=false;
+      f.textContent='Jam tanpa HP: '+rem+' menit lagi. Ketuk hanya untuk mencentang, lalu taruh HP.';
+    } else f.hidden=true;
+  }
+}
+
+/* ---------- home ---------- */
+function sessionStatus(key,ph){
+  var l=entry(key,ph), total=S[ph].length;
+  if(l&&l.at){ var d=new Date(l.at); return {cls:'ok',text:'Selesai '+fmt(d.getHours()*60+d.getMinutes())}; }
+  if(l&&l.skip) return {cls:'skip',text:'Dilewati'};
+  return {cls:'',text:'Belum · '+((l&&l.done.length)||0)+' / '+total+' tugas'};
+}
+function homeView(){
+  var wrap=h('div',{class:'wrap'}), w=windows(), d=new Date(), today=dkey(d);
+  wrap.append(h('header',{class:'top'},h('span',{class:'brand',text:'Ritual'}),
+    h('button',{class:'btn',type:'button',text:'Atur',onclick:function(){ ui.view='edit'; renderAll(); window.scrollTo(0,0); }})));
+  wrap.append(h('section',{class:'hero'},
+    h('div',{class:'hero-time',id:'homeclock',text:fmt(nowMin())}),
+    h('div',{class:'date',text:d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'})}),
+    h('div',{class:'next',id:'next',text:nextText()})));
+  var sess=h('section',{class:'block'},h('p',{class:'eyebrow',text:'Sesi hari ini'}));
+  [['eve','Malam',fmt(w.E)+'–'+fmt(w.B)],['mor','Pagi',fmt(w.W)+'–'+fmt(w.Mend)]].forEach(function(r,i){
+    var ph=r[0], key=(ph==='eve'&&nowMin()<w.W)?prevKey(today):today, st=sessionStatus(key,ph);
+    sess.append(h('div',{class:'sess'+(i===1?' last':'')},
+      h('div',{},h('div',{class:'sess-name',text:r[1]}),h('div',{class:'sess-meta',text:r[2]}),h('div',{class:'status '+st.cls,text:st.text})),
+      h('button',{class:'btn',type:'button',text:'Buka',onclick:function(){ ui.overlay={phase:ph,key:key,manual:true}; renderOverlay(); }})));
+  });
+  sess.append(h('p',{class:'hint',text:'Di dalam jendela waktu, layar terkunci sampai semua tugas selesai. Satu-satunya jalan keluar adalah menahan tombol lewati selama 3 detik.'}));
+  wrap.append(sess);
+  var week=h('div',{class:'week'});
+  for(var i=6;i>=0;i--){
+    var dd=new Date(d); dd.setDate(dd.getDate()-i); var k=dkey(dd);
+    var mk=function(ph){ var l=entry(k,ph); return h('span',{class:'dot'+(l&&l.at?' ok':(l&&l.skip?' skip':''))}); };
+    week.append(h('div',{class:'wd'},h('span',{text:dd.toLocaleDateString('id-ID',{weekday:'short'})}),mk('eve'),mk('mor')));
+  }
+  wrap.append(h('section',{class:'block'},h('p',{class:'eyebrow',text:'7 hari terakhir'}),week,
+    h('p',{class:'hint',text:'Baris atas malam, baris bawah pagi. Hijau selesai, garis miring dilewati.'})));
+  wrap.append(h('details',{},h('summary',{text:'Agar muncul otomatis di iPhone'}),
+    h('ol',{},
+      h('li',{text:'Buka halaman ini di Safari, ketuk Bagikan, lalu Tambah ke Layar Utama.'}),
+      h('li',{text:'Buka aplikasi Pintasan, tab Otomasi, tambah Otomasi Pribadi, pilih Waktu Hari.'}),
+      h('li',{text:'Atur jam mulai malam dan jam bangun, ulangi Harian, aksi Buka URL ke halaman ini.'}),
+      h('li',{text:'Matikan Tanya Sebelum Menjalankan agar langsung terbuka.'}),
+      h('li',{text:'Pasang juga alarm biasa di jam yang sama sebagai cadangan.'}))));
+  return wrap;
+}
+
+/* ---------- editor ---------- */
+function field(id,label,type,val,attrs,onchange){
+  var p={class:'in',type:type,id:id,value:val,onchange:onchange};
+  Object.keys(attrs||{}).forEach(function(k){ p[k]=attrs[k]; });
+  return h('label',{class:'fld','for':id},label,h('input',p));
+}
+function editView(){
+  var wrap=h('div',{class:'wrap'});
+  wrap.append(h('header',{class:'top'},h('span',{class:'brand',text:'Atur ritual'}),
+    h('button',{class:'btn pri',type:'button',text:'Selesai',onclick:function(){ ui.view='home'; renderAll(); window.scrollTo(0,0); }})));
+  wrap.append(h('p',{class:'savemsg',id:'savemsg',text:ui.saveMsg}));
+  wrap.append(h('section',{class:'panel'},h('h2',{text:'Jam'}),
+    h('div',{class:'grid3'},
+      field('wake','Bangun paling lambat','time',S.wake,{},function(e){
+        var v=e.target.value, m=v?toMin(v):-1;
+        if(m<120||m>480){ e.target.value=S.wake; return; }
+        S.wake=v; scheduleSave(); renderAll(); }),
+      field('bed','Tidur paling telat','time',S.bed,{},function(e){
+        var v=e.target.value, m=v?toMin(v):-1;
+        if(m<1200||m>1439){ e.target.value=S.bed; return; }
+        S.bed=v; scheduleSave(); renderAll(); }),
+      field('free','Menit tanpa HP','number',S.free,{min:0,max:180,step:5},function(e){
+        S.free=clamp(parseInt(e.target.value,10)||0,0,180); scheduleSave(); renderAll(); }))));
+  var tab=ui.tab;
+  wrap.append(h('div',{class:'tabs'},
+    h('button',{class:'btn tab',type:'button','aria-pressed':String(tab==='eve'),text:'Malam',onclick:function(){ ui.tab='eve'; renderAll(); }}),
+    h('button',{class:'btn tab',type:'button','aria-pressed':String(tab==='mor'),text:'Pagi',onclick:function(){ ui.tab='mor'; renderAll(); }})));
+  var unit=tab==='eve'?'menit sebelum tidur':'menit setelah bangun';
+  var ul=h('ul',{class:'elist'});
+  sorted(tab).forEach(function(t){
+    ul.append(h('li',{class:'er'},
+      h('input',{class:'in',type:'text',value:t.label,'aria-label':'Nama tugas',onchange:function(e){ t.label=e.target.value.trim()||t.label; e.target.value=t.label; scheduleSave(); }}),
+      h('input',{class:'in sub',type:'text',value:t.note||'',placeholder:'Catatan (opsional)','aria-label':'Catatan',onchange:function(e){ t.note=e.target.value.trim(); scheduleSave(); }}),
+      t.kind==='priorities'?h('span',{class:'tag',text:'Isi 3 prioritas besok'}):(t.kind==='pick'?h('span',{class:'tag',text:'Pilih tugas tersulit dari prioritas semalam'}):null),
+      h('div',{class:'er-line'},
+        h('label',{class:'off'},h('input',{class:'in num',type:'number',min:0,max:600,step:5,value:t.off,'aria-label':'Menit',onchange:function(e){ t.off=clamp(parseInt(e.target.value,10)||0,0,600); scheduleSave(); renderAll(); }}),h('span',{text:unit})),
+        h('span',{class:'at',text:'pukul '+fmt(atMin(tab,t))}),
+        h('button',{class:'btn sm danger',type:'button',text:'Hapus',onclick:function(){ S[tab]=S[tab].filter(function(x){ return x!==t; }); scheduleSave(); renderAll(); }}))));
+  });
+  wrap.append(ul);
+  var nl=h('input',{class:'in',type:'text',id:'newlabel',placeholder:'Tambah tugas baru','aria-label':'Tugas baru'});
+  var no=h('input',{class:'in num',type:'number',id:'newoff',min:0,max:600,step:5,value:tab==='eve'?15:30,'aria-label':'Menit'});
+  wrap.append(h('div',{class:'addrow'},
+    h('label',{class:'fld grow','for':'newlabel'},'Tugas',nl),
+    h('label',{class:'fld','for':'newoff'},unit,no),
+    h('button',{class:'btn pri',type:'button',text:'Tambah',onclick:function(){
+      var v=nl.value.trim(); if(!v){ nl.focus(); return; }
+      S[tab].push({id:'c'+Date.now().toString(36),off:clamp(parseInt(no.value,10)||0,0,600),kind:'check',label:v,note:''});
+      scheduleSave(); renderAll(); }})));
+  var rb=h('button',{class:'btn',type:'button',text:'Kembalikan tugas bawaan'}), armed=false, tm=null;
+  rb.addEventListener('click',function(){
+    if(!armed){ armed=true; rb.textContent='Ketuk lagi untuk mengembalikan'; tm=setTimeout(function(){ armed=false; rb.textContent='Kembalikan tugas bawaan'; },4000); }
+    else { clearTimeout(tm); var d=defaults(); S.eve=d.eve; S.mor=d.mor; scheduleSave(); renderAll(); }
+  });
+  wrap.append(h('div',{class:'panel'},rb));
+  return wrap;
+}
+
+function renderAll(){
+  var app=$('#app'); app.replaceChildren();
+  app.append(ui.view==='edit'?editView():homeView());
+  renderOverlay();
+}
+
+/* ---------- start ---------- */
+renderAll();
+setInterval(function(){ syncOverlay(); updateClocks(); },15000);
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'){ syncOverlay(); updateClocks(); if(ui.overlay) requestWake(); }
+});
+window.addEventListener('focus',function(){ syncOverlay(); updateClocks(); });
+loadState();
+})();
+</script>
+
+</body>
+</html>
